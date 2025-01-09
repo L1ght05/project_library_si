@@ -52,17 +52,6 @@ class Database:
             FOREIGN KEY (plan_id) REFERENCES subscription_plans (id)
         );
 
-        -- Table: pret
-        CREATE TABLE IF NOT EXISTS pret (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            book_id INTEGER NOT NULL,
-            username TEXT NOT NULL,
-            borrow_date DATETIME NOT NULL,
-            return_date DATETIME NOT NULL,
-            FOREIGN KEY (book_id) REFERENCES livres (id),
-            FOREIGN KEY (username) REFERENCES users (username)
-        );
-
         -- Table: livres
         CREATE TABLE IF NOT EXISTS livres (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -262,80 +251,6 @@ class Database:
             return []
         finally:
             conn.close()
-
-    def add_borrow(self, book_id, username):
-        """
-        Add a new borrow record
-        """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        try:
-            borrow_date = datetime.now().date()
-            return_date = borrow_date + timedelta(days=15)
-            
-            cursor.execute('''
-                SELECT id FROM users WHERE username = ?
-            ''', (username,))
-            user_id = cursor.fetchone()[0]
-
-            cursor.execute('''
-                SELECT code_catalogue FROM livres WHERE id = ?
-            ''', (book_id,))
-            catalog_code = cursor.fetchone()[0]
-
-            cursor.execute('''
-                INSERT INTO loans (subscriber_id, catalog_code, loan_date, return_date)
-                VALUES (?, ?, ?, ?)
-            ''', (user_id, catalog_code, borrow_date, return_date))
-            conn.commit()
-            return True
-        except sqlite3.Error as e:
-            print(f"Error adding borrow record: {e}")
-            return False
-        finally:
-            conn.close()
-
-    def get_borrowed_books_for_user(self, username):
-        """
-        Get all borrowed books for a user
-        """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        try:
-            cursor.execute('''
-                SELECT p.*, l.title, l.author
-                FROM pret p
-                JOIN livres l ON p.book_id = l.id
-                WHERE p.username = ?
-            ''', (username,))
-            borrowed_books = cursor.fetchall()
-            return borrowed_books
-        except sqlite3.Error as e:
-            print(f"Error retrieving borrowed books for user: {e}")
-            return []
-        finally:
-            conn.close()
-
-    def get_borrowed_books_for_book(self, book_id):
-        """
-        Get all borrow records for a book
-        """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        try:
-            cursor.execute('''
-                SELECT p.*, u.username
-                FROM pret p
-                JOIN users u ON p.username = u.username
-                WHERE p.book_id = ?
-            ''', (book_id,))
-            borrowed_books = cursor.fetchall()
-            return borrowed_books
-        except sqlite3.Error as e:
-            print(f"Error retrieving borrowed books for book: {e}")
-            return []
-        finally:
-            conn.close()
     
     def get_book(self, book_id):
         """
@@ -425,6 +340,21 @@ class Database:
         except sqlite3.Error as e:
             print(f"Error retrieving borrowed books with users: {e}")
             return []
+        finally:
+            conn.close()
+
+    def get_user_by_id(self, user_id):
+        """
+        Retrieve a user by their ID
+        """
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        try:
+            cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+            return cursor.fetchone()
+        except sqlite3.Error as e:
+            print(f"Error retrieving user: {e}")
+            return None
         finally:
             conn.close()
 

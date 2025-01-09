@@ -81,11 +81,7 @@ class ShowBooksPage:
     def borrow_book(self, book_id, username):
         subscription = self.library_app.db.get_current_subscription(username)
         if subscription:
-            if self.library_app.db.add_borrow(book_id, username):
-                messagebox.showinfo("Success", "Book borrowed successfully!")
-                self.update_book_list(self.frame, None, username)
-            else:
-                messagebox.showerror("Error", "Failed to borrow book.")
+            self.library_app.borrow_book(book_id)
         else:
             messagebox.showerror("Error", "You must be a subscriber to borrow books.")
 

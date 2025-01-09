@@ -242,10 +242,14 @@ class LibraryApp:
         else:
             borrowed_books_info = ""
             for loan in loans:
+                user = self.db.get_user_by_id(loan[1])
                 book = self.db.get_book(loan[2])
-                if book:
-                    borrowed_books_info += f"Book Title: {book[7]}, Author: {book[8]}, Loan Date: {loan[3]}, Return Date: {loan[4]}\n"
-            messagebox.showinfo("Borrowed Books", borrowed_books_info)
+                if user and book:
+                    borrowed_books_info += f"User ID: {user[0]}, Book Title: {book[7]}, Author: {book[8]}, Loan Date: {loan[3]}, Return Date: {loan[4]}\n"
+            if borrowed_books_info:
+                messagebox.showinfo("Borrowed Books", borrowed_books_info)
+            else:
+                messagebox.showinfo("Borrowed Books", "No books have been borrowed yet.")
         self.create_main_library_frame()
 
     def borrow_book(self, book_id):
