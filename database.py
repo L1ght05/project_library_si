@@ -366,9 +366,16 @@ class Database:
         cursor = conn.cursor()
         try:
             cursor.execute('''
+                SELECT * FROM loans WHERE subscriber_id = ? AND catalog_code = ?
+            ''', (subscriber_id, catalog_code))
+            existing_loan = cursor.fetchone()
+            if existing_loan:
+                print(f"Loan already exists for subscriber {subscriber_id} and book {catalog_code}")
+                return False
+            cursor.execute('''
                 INSERT INTO loans (subscriber_id, catalog_code, loan_date, return_date)
                 VALUES (?, ?, ?, ?)
-            ''', (subscriber_id, catalog_code, loan_date, return_date))
+            ''', (subscriber_id, catalog_code, loan_date.strftime('%Y-%m-%d'), return_date.strftime('%Y-%m-%d')))
             conn.commit()
             return True
         except sqlite3.Error as e:
@@ -379,13 +386,17 @@ class Database:
 
     def get_loans_by_subscriber(self, subscriber_id: int):
         """
-        Get all loans for a subscriber
+        Get all loans for a subscriber with book and user information
         """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         try:
             cursor.execute('''
-                SELECT * FROM loans WHERE subscriber_id = ?
+                SELECT lo.loan_date, lo.return_date, l.title, l.author, u.username, u.id
+                FROM loans lo
+                JOIN livres l ON lo.catalog_code = l.code_catalogue
+                JOIN users u ON lo.subscriber_id = u.id
+                WHERE lo.subscriber_id = ?
             ''', (subscriber_id,))
             loans = cursor.fetchall()
             return loans

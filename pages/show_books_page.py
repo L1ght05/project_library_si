@@ -17,7 +17,10 @@ class ShowBooksPage:
 
         # Create books display window
         self.frame = self.library_app.register_window(ctk.CTkToplevel(self.app))
-        self.frame.title("Available Books")
+        if search_term == "borrowed":
+            self.frame.title("Borrowed Books")
+        else:
+            self.frame.title("Available Books")
         self.frame.geometry("600x400")
         self.frame.protocol("WM_DELETE_WINDOW", self.library_app.create_main_library_frame)
 
@@ -32,7 +35,10 @@ class ShowBooksPage:
         books_frame = ctk.CTkScrollableFrame(self.frame)
         books_frame.pack(pady=20, padx=20, fill="both", expand=True)
 
-        self.update_book_list(books_frame, search_term, username)
+        if search_term == "borrowed":
+            self.update_book_list(books_frame, "borrowed", username)
+        else:
+            self.update_book_list(books_frame, search_term, username)
 
         # Back button
         back_button = ctk.CTkButton(self.frame, text="Back", command=self.library_app.create_main_library_frame)
@@ -51,7 +57,10 @@ class ShowBooksPage:
             widget.destroy()
 
         # Retrieve books from database
-        if search_term:
+        if search_term == "borrowed":
+            self.show_borrowed_books(books_frame, username)
+            return
+        elif search_term:
             books = self.library_app.db.search_livres(search_term)
         else:
             books = self.library_app.db.get_books()
@@ -62,21 +71,23 @@ class ShowBooksPage:
             no_books_label.pack(pady=20, padx=10)
         else:
             for book in books:
+                book_frame = ctk.CTkFrame(books_frame)
+                book_frame.pack(pady=10, padx=10, fill="x")
+
                 book_label = ctk.CTkLabel(
-                    books_frame,
+                    book_frame,
                     text=f"Title: {book[7]}, Author: {book[8]}, Category: {book[4]}, Quantity: {book[10]}, Cote: {book[2]}"
                 )
-                book_label.pack(pady=5, padx=10, anchor="w", side="left")
+                book_label.pack(pady=5, padx=10, anchor="w")
 
-                borrow_button = ctk.CTkButton(books_frame, text="Borrow", command=lambda book_id=book[0], username=username: self.borrow_book(book_id, username))
-                borrow_button.pack(pady=5, padx=10)
+                borrow_button = ctk.CTkButton(book_frame, text="Borrow", command=lambda book_id=book[0], username=username: self.borrow_book(book_id, username))
+                borrow_button.pack(pady=5, padx=10, side="left")
 
+                delete_button = ctk.CTkButton(book_frame, text="Delete", command=lambda book_id=book[0]: self.delete_book(book_id))
+                delete_button.pack(pady=5, padx=10, side="left")
 
-                delete_button = ctk.CTkButton(books_frame, text="Delete", command=lambda book_id=book[0]: self.delete_book(book_id))
-                delete_button.pack(pady=5, padx=10)
-
-                edit_button = ctk.CTkButton(books_frame, text="Edit", command=lambda book_id=book[0]: self.edit_book(book_id))
-                edit_button.pack(pady=5, padx=10)
+                edit_button = ctk.CTkButton(book_frame, text="Edit", command=lambda book_id=book[0]: self.edit_book(book_id))
+                edit_button.pack(pady=5, padx=10, side="left")
 
     def borrow_book(self, book_id, username):
         subscription = self.library_app.db.get_current_subscription(username)
@@ -149,3 +160,30 @@ class ShowBooksPage:
             self.library_app.create_show_books_frame(self.library_app.current_username)
         else:
             messagebox.showerror("Error", "Failed to update book.")
+
+    def show_borrowed_books(self, books_frame, username):
+        subscription = self.library_app.db.get_current_subscription(username)
+        if subscription:
+            self.update_borrowed_book_list(books_frame, username)
+        else:
+            messagebox.showerror("Error", "You must be a subscriber to view borrowed books.")
+
+    def update_borrowed_book_list(self, books_frame, username):
+        # Clear previous book list
+        for widget in books_frame.winfo_children():
+            widget.destroy()
+
+        # Retrieve borrowed books from database
+        loans = self.library_app.db.get_loans_by_subscriber(self.library_app.db.get_user(username)[0])
+
+        # Display borrowed books with user ID and book title
+        if not loans:
+            no_books_label = ctk.CTkLabel(books_frame, text="No books borrowed")
+            no_books_label.pack(pady=20, padx=10)
+        else:
+            for loan in loans:
+                book_label = ctk.CTkLabel(
+                    books_frame,
+                    text=f"Loan Date: {loan[0]}, Return Date: {loan[1]}, Title: {loan[2]}, Author: {loan[3]}, Username: {loan[4]}, User ID: {loan[5]}"
+                )
+                book_label.pack(pady=5, padx=10, anchor="w")

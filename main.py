@@ -16,7 +16,7 @@ from pages.payment_page import PaymentMethodPage, CardInformationPage
 class LibraryApp:
     def __init__(self):
         self.app = ctk.CTk()
-        self.app.title("Library Management System")
+        self.app.title("ADRAR LIBRARY")
         self.app.geometry("800x600")
 
         self.db = Database()
@@ -231,26 +231,24 @@ class LibraryApp:
                 end_date = start_date + timedelta(days=selected_plan[3] * 30)
                 self.db.add_subscription(user[1], selected_plan[0], start_date.strftime('%Y-%m-%d %H:%M:%S'), end_date.strftime('%Y-%m-%d %H:%M:%S'), 'abonne')
 
+    def get_user_id(self, username):
+        user = self.db.get_user(username)
+        if user:
+            return user[0]
+        return None
+
     def show_borrowed_books(self):
         if not hasattr(self, 'logged_in_user') or self.logged_in_user is None:
             messagebox.showerror("Error", "Please log in to view borrowed books.")
             return
-
-        loans = self.loan_manager.get_loans_by_subscriber(self.db.get_user(self.logged_in_user)[0])
-        if not loans:
-            messagebox.showinfo("Info", "No books have been borrowed yet.")
-        else:
-            borrowed_books_info = ""
-            for loan in loans:
-                user = self.db.get_user_by_id(loan[1])
-                book = self.db.get_book(loan[2])
-                if user and book:
-                    borrowed_books_info += f"User ID: {user[0]}, Book Title: {book[7]}, Author: {book[8]}, Loan Date: {loan[3]}, Return Date: {loan[4]}\n"
-            if borrowed_books_info:
-                messagebox.showinfo("Borrowed Books", borrowed_books_info)
-            else:
-                messagebox.showinfo("Borrowed Books", "No books have been borrowed yet.")
-        self.create_main_library_frame()
+        
+        user_id = self.get_user_id(self.logged_in_user)
+        if user_id:
+            loans = self.loan_manager.get_loans_by_subscriber(user_id)
+            
+            show_books_page = ShowBooksPage(self.app, self)
+            show_books_page.create_frame(self.logged_in_user, "borrowed")
+            self.current_frame = show_books_page.frame
 
     def borrow_book(self, book_id):
         if not hasattr(self, 'logged_in_user') or self.logged_in_user is None:
